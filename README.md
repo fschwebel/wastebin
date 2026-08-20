@@ -196,6 +196,7 @@ run-time behavior:
 | `WASTEBIN_CACHE_SIZE`             | Number of rendered items to cache. Disable with 0.            | `128`                 |
 | `WASTEBIN_DATABASE_PATH`          | Path to the sqlite3 database file.                            | `:memory:`            |
 | `WASTEBIN_HTTP_TIMEOUT`           | Maximum number of seconds a request is processed until wastebin responds with 408. | `5` |
+| `WASTEBIN_ID_SIZE`                | Bit size of newly generated paste identifiers, either `64` for eleven-character identifiers or `32` for the shorter six-character identifiers used before wastebin 3.0. Note that the 32-bit space makes collisions and thus insertion failures much more likely as the database grows. Existing pastes remain accessible when switching. | `64` |
 | `WASTEBIN_MAX_BODY_SIZE`          | Number of bytes to accept for POST requests.                  | `1048576`, i.e. 1 MB  |
 | `WASTEBIN_PASSWORD_SALT`          | Salt used to hash user passwords used for encrypting pastes.  | `somesalt`            |
 | `WASTEBIN_PASTE_EXPIRATIONS`      | Possible paste expirations as a comma-separated list of seconds or values with duration magnitudes (`s`, `m`, `h`, `d`, `w`, `M`, `y` for seconds, minutes, hours, days, weeks, months and years respectively). Appending `=d` to one of the values makes it the default selection. | see [here](https://github.com/matze/wastebin/blob/eb61c78506a165605f145e8374ed64822405eda0/crates/wastebin_server/src/env.rs#L166) |

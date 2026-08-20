@@ -189,6 +189,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn insert_with_32_bit_ids() -> Result<(), Box<dyn std::error::Error>> {
+        use wastebin_core::id::IdSize;
+
+        let client = Client::with_id_size(IdSize::Id32, StoreCookies(false)).await;
+        let data = Entry {
+            text: String::from("FooBarBaz"),
+            ..Default::default()
+        };
+
+        let res = client.post_form().form(&data).send().await?;
+        assert_eq!(res.status(), StatusCode::SEE_OTHER);
+
+        // A leading slash followed by a six-character identifier.
+        let location = res.headers().get("location").unwrap().to_str()?;
+        assert_eq!(location.len(), 7);
+
+        let res = client.get(location).send().await?;
+        assert_eq!(res.status(), StatusCode::OK);
+        assert!(res.text().await?.contains("FooBarBaz"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn insert_rejects_disallowed_expiration() -> Result<(), Box<dyn std::error::Error>> {
         let client = Client::new(StoreCookies(false)).await;
 

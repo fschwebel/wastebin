@@ -12,6 +12,7 @@ use crate::page;
 
 use wastebin_core::db::{self, Database};
 use wastebin_core::expiration::ExpirationSet;
+use wastebin_core::id::IdSize;
 use wastebin_highlight::{Highlighter, Theme};
 
 pub(crate) struct Client {
@@ -24,11 +25,19 @@ pub(crate) struct StoreCookies(pub bool);
 
 impl Client {
     pub(crate) async fn new(store_cookies: StoreCookies) -> Self {
-        Self::with_expirations("0", store_cookies).await
+        Self::build("0", IdSize::default(), store_cookies).await
     }
 
     pub(crate) async fn with_expirations(expirations: &str, store_cookies: StoreCookies) -> Self {
-        let (db, handler) = Database::new(db::Open::Memory).expect("open memory database");
+        Self::build(expirations, IdSize::default(), store_cookies).await
+    }
+
+    pub(crate) async fn with_id_size(id_size: IdSize, store_cookies: StoreCookies) -> Self {
+        Self::build("0", id_size, store_cookies).await
+    }
+
+    async fn build(expirations: &str, id_size: IdSize, store_cookies: StoreCookies) -> Self {
+        let (db, handler) = Database::new(db::Open::Memory, id_size).expect("open memory database");
         let cache = Cache::new(NonZeroUsize::new(128).unwrap()).unwrap();
         let key = Key::generate();
         let expirations = expirations.parse::<ExpirationSet>().unwrap();

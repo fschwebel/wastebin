@@ -9,7 +9,7 @@ use tokio::sync::oneshot;
 
 use crate::crypto::{self, Password};
 use crate::expiration::Expiration;
-use crate::id::Id;
+use crate::id::{Id, IdSize};
 use read::{DatabaseEntry, ListEntry, Metadata};
 
 /// Database related errors.
@@ -54,6 +54,8 @@ struct Handler {
     conn: Connection,
     /// Receiver for database commands.
     receiver: kanal::Receiver<Command>,
+    /// Bit size of newly generated identifiers.
+    id_size: IdSize,
 }
 
 /// Commands issued to the database handler and corresponding to [`Database`] calls.
@@ -335,8 +337,12 @@ impl From<rusqlite::Error> for Error {
 }
 
 impl Handler {
-    /// Create new database with the given `method`.
-    fn new(method: Open, receiver: kanal::Receiver<Command>) -> Result<Self, Error> {
+    /// Create new database with the given `method`, generating ids of `id_size`.
+    fn new(
+        method: Open,
+        id_size: IdSize,
+        receiver: kanal::Receiver<Command>,
+    ) -> Result<Self, Error> {
         tracing::debug!("opening {method:?}");
 
         let mut conn = match method {
@@ -383,7 +389,11 @@ impl Handler {
 
         migrations.to_latest(&mut conn)?;
 
-        Ok(Self { conn, receiver })
+        Ok(Self {
+            conn,
+            receiver,
+            id_size,
+        })
     }
 
     /// Run database command loop.
@@ -453,7 +463,7 @@ impl Handler {
         let nonce = nonce.as_ref().map(|n| n.as_slice());
 
         loop {
-            let id = Id::rand();
+            let id = Id::rand(self.id_size);
 
             let result = match entry.expires {
                 None => self.conn.execute(
@@ -632,12 +642,15 @@ impl Handler {
 }
 
 impl Database {
-    /// Create new database with the given `method` as well as a [`Handler`] future that makes the
-    /// actual calls.
-    pub fn new(method: Open) -> Result<(Self, impl Future<Output = Result<(), Error>>), Error> {
+    /// Create new database with the given `method`, generating ids of `id_size`, as well as a
+    /// [`Handler`] future that makes the actual calls.
+    pub fn new(
+        method: Open,
+        id_size: IdSize,
+    ) -> Result<(Self, impl Future<Output = Result<(), Error>>), Error> {
         let (sender, receiver) = kanal::bounded(256);
         let sender = sender.to_async();
-        let handler = Handler::new(method, receiver)?;
+        let handler = Handler::new(method, id_size, receiver)?;
         let fut = async move { tokio::task::spawn_blocking(|| handler.run()).await? };
         Ok((Self { sender }, fut))
     }
@@ -782,9 +795,31 @@ mod tests {
     }
 
     fn new_db() -> Result<Database, Box<dyn std::error::Error>> {
-        let (db, handler) = Database::new(Open::Memory)?;
+        let (db, handler) = Database::new(Open::Memory, IdSize::default())?;
         tokio::spawn(handler);
         Ok(db)
+    }
+
+    #[tokio::test]
+    async fn insert_with_32_bit_ids() -> Result<(), Box<dyn std::error::Error>> {
+        let (db, handler) = Database::new(Open::Memory, IdSize::Id32)?;
+        tokio::spawn(handler);
+
+        let entry = write::Entry {
+            text: "hello world".to_string(),
+            ..Default::default()
+        };
+
+        let (id, _entry) = db.insert(entry).await?;
+        assert!(matches!(id, Id::Id32(_)));
+        assert_eq!(id.to_string().len(), 6);
+
+        // The entry round-trips through its six-character identifier.
+        let id = id.to_string().parse::<Id>()?;
+        let entry = db.get(id, None).await?;
+        assert!(matches!(entry, read::Entry::Regular(_)));
+
+        Ok(())
     }
 
     #[tokio::test]

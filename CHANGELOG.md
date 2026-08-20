@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- `WASTEBIN_ID_SIZE` environment variable to generate short six-character
+  paste identifiers (32-bit) like wastebin before 3.0 instead of the default
+  eleven-character (64-bit) ones.
+
 ### Changed
 
 - Top-align Markdown-rendered table cells.

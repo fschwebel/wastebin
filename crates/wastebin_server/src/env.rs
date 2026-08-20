@@ -8,9 +8,10 @@ use std::time::Duration;
 use axum_extra::extract::cookie::Key;
 
 use wastebin_core::env::vars::{
-    self, ADDRESS_PORT, BASE_URL, CACHE_SIZE, DATABASE_PATH, HTTP_TIMEOUT, MAX_BODY_SIZE,
+    self, ADDRESS_PORT, BASE_URL, CACHE_SIZE, DATABASE_PATH, HTTP_TIMEOUT, ID_SIZE, MAX_BODY_SIZE,
     PASTE_EXPIRATIONS, SIGNING_KEY,
 };
+use wastebin_core::id::IdSize;
 use wastebin_core::{db, expiration};
 use wastebin_highlight::{Theme, theme::ParseThemeNameError};
 
@@ -36,6 +37,8 @@ pub(crate) enum Error {
     HttpTimeout(ParseIntError),
     #[error("failed to parse {PASTE_EXPIRATIONS}: {0}")]
     ParsePasteExpiration(#[from] expiration::Error),
+    #[error("failed to parse {ID_SIZE}, expected 32 or 64")]
+    IdSize,
     #[error("failed to parse theme name")]
     ParseTheme(#[from] ParseThemeNameError),
     #[error("binding to both TCP and Unix socket is not possible")]
@@ -107,6 +110,20 @@ pub fn socket_type() -> Result<SocketType, Error> {
             let addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), 8088);
             Ok(SocketType::Tcp(addr))
         }
+    }
+}
+
+/// Bit size of newly generated paste identifiers, either 64 (the default) or 32 for shorter but
+/// more collision-prone six-character identifiers.
+pub fn id_size() -> Result<IdSize, Error> {
+    match std::env::var(vars::ID_SIZE) {
+        Ok(var) => match var.as_str() {
+            "32" => Ok(IdSize::Id32),
+            "64" => Ok(IdSize::Id64),
+            _ => Err(Error::IdSize),
+        },
+        Err(VarError::NotUnicode(_)) => Err(Error::IdSize),
+        Err(VarError::NotPresent) => Ok(IdSize::default()),
     }
 }
 

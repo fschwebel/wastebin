@@ -28,12 +28,26 @@ pub enum Id {
     Id64(i64),
 }
 
+/// Bit size of newly generated [`Id`]s.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum IdSize {
+    /// 64-bit identifiers rendered as eleven characters.
+    #[default]
+    Id64,
+    /// Legacy 32-bit identifiers rendered as six characters. Beware of the
+    /// higher collision probability in the smaller identifier space.
+    Id32,
+}
+
 impl Id {
-    /// Generate a new random [`Id`]. According to the [`rand::rng()`] documentation this should be
-    /// fast and not require additional an `spawn_blocking()` call.
+    /// Generate a new random [`Id`] of the given `size`. According to the [`rand::rng()`]
+    /// documentation this should be fast and not require additional an `spawn_blocking()` call.
     #[must_use]
-    pub fn rand() -> Self {
-        Self::Id64(rand::rng().random::<i64>())
+    pub fn rand(size: IdSize) -> Self {
+        match size {
+            IdSize::Id64 => Self::Id64(rand::rng().random::<i64>()),
+            IdSize::Id32 => Self::Id32(rand::rng().random::<u32>()),
+        }
     }
 
     /// Return i64 representation for database storage purposes.
@@ -184,6 +198,17 @@ mod tests {
         let id = Id::from_str("eVI4Z48hybf").unwrap();
         assert_eq!(id.to_i64(), 1_367_045_688_504_311_829);
         assert_eq!(id.to_string(), "eVI4Z48hybf");
+    }
+
+    #[test]
+    fn rand_respects_id_size() {
+        let id = Id::rand(IdSize::Id64);
+        assert!(matches!(id, Id::Id64(_)));
+        assert_eq!(id.to_string().len(), 11);
+
+        let id = Id::rand(IdSize::Id32);
+        assert!(matches!(id, Id::Id32(_)));
+        assert_eq!(id.to_string().len(), 6);
     }
 
     #[test]

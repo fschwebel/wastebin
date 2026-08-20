@@ -260,7 +260,7 @@ async fn start() -> Result<(), Box<dyn std::error::Error>> {
     let title = env::title();
 
     let cache = Cache::new(cache_size)?;
-    let (db, db_handler) = Database::new(method)?;
+    let (db, db_handler) = Database::new(method, env::id_size()?)?;
 
     tracing::debug!("serving on {socket_type}");
     tracing::debug!("caching {cache_size} paste highlights");

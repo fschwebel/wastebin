@@ -10,6 +10,8 @@ pub mod vars {
     pub const DATABASE_PATH: &str = "WASTEBIN_DATABASE_PATH";
     /// Time before a request times out.
     pub const HTTP_TIMEOUT: &str = "WASTEBIN_HTTP_TIMEOUT";
+    /// Bit size of newly generated paste identifiers.
+    pub const ID_SIZE: &str = "WASTEBIN_ID_SIZE";
     /// Maximum body size.
     pub const MAX_BODY_SIZE: &str = "WASTEBIN_MAX_BODY_SIZE";
     /// Password salt for encryption.
