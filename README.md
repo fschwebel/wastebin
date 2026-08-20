@@ -13,7 +13,9 @@ A minimal pastebin with a design shamelessly copied from
 You are reading the documentation for an **unreleased version**. You can refer
 to released versions here:
 
-**[3.7.0](https://github.com/matze/wastebin/tree/ef77e45f3ae7f3d8ec1385f9f22527d10e1ec9aa)** •
+**[3.7.2](https://github.com/matze/wastebin/tree/dfca1dc82b78394d8e2dfe209d9ef3fb539da605)** •
+[3.7.1](https://github.com/matze/wastebin/tree/a50c74abb1f59e043d1350420438251214d00f98) •
+[3.7.0](https://github.com/matze/wastebin/tree/ef77e45f3ae7f3d8ec1385f9f22527d10e1ec9aa) •
 [3.6.2](https://github.com/matze/wastebin/tree/f9cb25a4d5b19fa938eef0af42f68f2835f17b98) •
 [3.5.0](https://github.com/matze/wastebin/tree/d379a6e3e73e6f1fcf23f93c9b0cc857f46acbce) •
 [3.4.1](https://github.com/matze/wastebin/tree/c9d717329a6e357e8a13a324bfa9a53d41ae9b35) •
@@ -53,7 +55,7 @@ to released versions here:
 
 ### Run pre-built binaries
 
-You can download pre-built, statically compiled [Linux and MacOS
+You can download pre-built, statically compiled [Linux and macOS
 binaries](https://github.com/matze/wastebin/releases). After extraction run the
 contained `wastebin` binary.
 
@@ -110,7 +112,7 @@ Or install the provided `wastebin` package like you normally would.
 
 ### Build from source
 
-Install a Rust 2024 toolchain containing Rust 1.85 with
+Install a Rust 2024 toolchain containing Rust 1.95 with
 [rustup](https://rustup.rs) and run the server binary with
 
 ```bash
@@ -150,9 +152,10 @@ podman exec -e RUST_LOG=debug -it wastebin /app/wastebin-ctl
 When viewing a paste, you can use
 
 * <kbd>r</kbd> to view the raw paste,
-* <kbd>n</kbd> to go the index page,
+* <kbd>n</kbd> to go to the index page,
 * <kbd>y</kbd> to copy the current URL to the clipboard,
 * <kbd>c</kbd> to copy the content to the clipboard,
+* <kbd>d</kbd> to download the paste,
 * <kbd>q</kbd> to display the current URL as a QR code,
 * <kbd>p</kbd> to view the formatted paste,
 * <kbd>w</kbd> to toggle line wrapping on and off (off by default),
@@ -195,7 +198,7 @@ run-time behavior:
 | `WASTEBIN_HTTP_TIMEOUT`           | Maximum number of seconds a request is processed until wastebin responds with 408. | `5` |
 | `WASTEBIN_MAX_BODY_SIZE`          | Number of bytes to accept for POST requests.                  | `1048576`, i.e. 1 MB  |
 | `WASTEBIN_PASSWORD_SALT`          | Salt used to hash user passwords used for encrypting pastes.  | `somesalt`            |
-| `WASTEBIN_PASTE_EXPIRATIONS`      | Possible paste expirations as a comma-separated list of seconds or values with duration magnitudes (`s`, `m`, `h`, `d`, `M`, `y` for seconds, minutes, hours, days, months and years respectively). Appending `=d` to one of the value makes it the default selection. | see [here](https://github.com/matze/wastebin/blob/eb61c78506a165605f145e8374ed64822405eda0/crates/wastebin_server/src/env.rs#L166) |
+| `WASTEBIN_PASTE_EXPIRATIONS`      | Possible paste expirations as a comma-separated list of seconds or values with duration magnitudes (`s`, `m`, `h`, `d`, `w`, `M`, `y` for seconds, minutes, hours, days, weeks, months and years respectively). Appending `=d` to one of the values makes it the default selection. | see [here](https://github.com/matze/wastebin/blob/eb61c78506a165605f145e8374ed64822405eda0/crates/wastebin_server/src/env.rs#L166) |
 | `WASTEBIN_SIGNING_KEY`            | Key to sign cookies. Must be at least 64 bytes long.          | Random key generated at startup, i.e. cookies will become invalid after restarts and paste creators will not be able to delete their pastes. |
 | `WASTEBIN_THEME`                  | Theme colors, one of `ayu`, `base16ocean`, `catppuccin`, `coldark`, `gruvbox`, `monokai`, `onehalf`, `solarized`. See [this page](https://matze.github.io/wastebin/) for a preview. | `ayu` |
 | `WASTEBIN_TITLE`                  | HTML page title.                                              | `wastebin`            |
@@ -219,7 +222,7 @@ POST a new paste to the `/` endpoint with the following JSON payload:
   "title": "<paste title, optional>",
   "expires": <number of seconds from now, optional>,
   "burn_after_reading": <true/false, optional>,
-  "password": <password for encryption optional>,
+  "password": <password for encryption, optional>,
   "owner": "<owner token from a previous insert, optional>"
 }
 ```
@@ -281,7 +284,7 @@ function paste_from_clipboard() {
 }
 ```
 
-For wayland users, consider replace the `xclip ...` with `wl-paste` from `wl-clipboard`.
+For Wayland users, consider replacing the `xclip ...` with `wl-paste` from `wl-clipboard`.
 
 ### Paste from stdin
 

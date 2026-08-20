@@ -198,7 +198,7 @@
   hours, days, months and years.
 - Display set expiration in the title.
 - Display set expiration in `wastebin-ctl list`.
-- `catpuccin` theme key selecting Catppuccin Latte for light and Catppuccin
+- `catppuccin` theme key selecting Catppuccin Latte for light and Catppuccin
   Mocha for dark mode.
 - New debsources, GDScript, Idris, Odin and Typst syntaxes.
 
