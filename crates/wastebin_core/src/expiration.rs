@@ -163,6 +163,10 @@ impl Display for Expiration {
             parts.push(format!("{secs} secs"));
         }
 
+        // Keep only the two most significant parts to avoid overly verbose
+        // output like "2 years, 2 weeks, 3 days, 23 hours, 59 mins, 42 secs".
+        parts.truncate(2);
+
         f.write_str(&parts.join(", "))
     }
 }
@@ -392,7 +396,7 @@ mod tests {
         );
         assert_eq!(
             format!("{}", Expiration::from_secs(60 * 60 * 24 * 7 * 8)),
-            "1 month, 3 weeks, 5 days"
+            "1 month, 3 weeks"
         );
         assert_eq!(
             format!("{}", Expiration::from_secs(60 * 60 * 24 * 7 * 4 * 12)),
@@ -400,7 +404,7 @@ mod tests {
         );
         assert_eq!(
             format!("{}", Expiration::from_secs(60 * 60 * 24 * 7 * 4 * 24)),
-            "1 year, 10 months, 1 week"
+            "1 year, 10 months"
         );
         assert_eq!(
             format!(
@@ -416,14 +420,20 @@ mod tests {
                         + 42
                 )
             ),
-            "2 years, 2 weeks, 3 days, 23 hours, 59 mins, 42 secs"
+            "2 years, 2 weeks"
         );
         assert_eq!(
             format!(
                 "{}",
                 Expiration::from_secs(60 * 60 * 24 * 7 * 8 + 60 * 60 * 24 * 2 + 23 * 60 * 60 + 42)
             ),
-            "1 month, 4 weeks, 23 hours, 42 secs"
+            "1 month, 4 weeks"
+        );
+        // The two most significant non-zero parts are kept, so an hour-scale
+        // expiration shows hours and minutes.
+        assert_eq!(
+            format!("{}", Expiration::from_secs(2 * 60 * 60 + 3 * 60 + 45)),
+            "2 hours, 3 mins"
         );
 
         assert_eq!(

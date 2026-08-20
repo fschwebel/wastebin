@@ -155,7 +155,7 @@ function formatExpiration(secs) {
     parts.push(secs + " secs");
   }
 
-  return parts.join(", ");
+  return parts.slice(0, 2).join(", ");
 }
 
 const countdown = $("expiration-countdown");

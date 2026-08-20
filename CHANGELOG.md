@@ -13,6 +13,9 @@
 - Top-align Markdown-rendered table cells.
 - The expiry counter on the paste view counts down in real time and switches
   to an "expired" note once the paste has lapsed.
+- Expiry durations display at most their two most significant units, e.g.
+  "2 years, 2 weeks" instead of "2 years, 2 weeks, 3 days, 23 hours, 59 mins,
+  42 secs".
 
 
 ## 3.7.2
