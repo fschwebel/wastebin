@@ -98,6 +98,7 @@ static EN: phf::Map<&'static str, &'static str> = phf_map! {
     "index.button.paste.label" => "paste",
 
     "paste.expires_in" => "expires in",
+    "paste.expired" => "expired",
     "paste.toast.copied_content" => "Copied content",
     "paste.toast.copied_url" => "Copied URL",
     "paste.toast.burned" => "Content is burned and cannot be looked up again!",
@@ -172,6 +173,7 @@ static DE: phf::Map<&'static str, &'static str> = phf_map! {
     "index.button.paste.label" => "einfügen",
 
     "paste.expires_in" => "läuft ab in",
+    "paste.expired" => "abgelaufen",
     "paste.toast.copied_content" => "Inhalt kopiert",
     "paste.toast.copied_url" => "URL kopiert",
     "paste.toast.burned" => "Inhalt ist vernichtet und kann nicht mehr abgerufen werden!",
@@ -246,6 +248,7 @@ static ZH: phf::Map<&'static str, &'static str> = phf_map! {
     "index.button.paste.label" => "粘贴",
 
     "paste.expires_in" => "过期于",
+    "paste.expired" => "已过期",
     "paste.toast.copied_content" => "已复制内容",
     "paste.toast.copied_url" => "已复制链接",
     "paste.toast.burned" => "内容已销毁，无法再次查看！",

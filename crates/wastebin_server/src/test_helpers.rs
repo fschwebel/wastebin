@@ -24,10 +24,14 @@ pub(crate) struct StoreCookies(pub bool);
 
 impl Client {
     pub(crate) async fn new(store_cookies: StoreCookies) -> Self {
+        Self::with_expirations("0", store_cookies).await
+    }
+
+    pub(crate) async fn with_expirations(expirations: &str, store_cookies: StoreCookies) -> Self {
         let (db, handler) = Database::new(db::Open::Memory).expect("open memory database");
         let cache = Cache::new(NonZeroUsize::new(128).unwrap()).unwrap();
         let key = Key::generate();
-        let expirations = "0".parse::<ExpirationSet>().unwrap();
+        let expirations = expirations.parse::<ExpirationSet>().unwrap();
         let page = Arc::new(page::Page::new(
             String::from("test"),
             url::Url::parse("https://localhost:8888").unwrap(),

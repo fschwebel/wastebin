@@ -205,6 +205,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn expiration_renders_remaining_seconds_for_countdown()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::with_expirations("0,3600", StoreCookies(false)).await;
+
+        let res = client
+            .post_form()
+            .form(&crate::handlers::insert::form::Entry {
+                text: String::from("FooBarBaz"),
+                expires: Some(String::from("3600")),
+                ..Default::default()
+            })
+            .send()
+            .await?;
+        assert_eq!(res.status(), StatusCode::SEE_OTHER);
+        let location = res.headers().get("location").unwrap().to_str()?;
+
+        let content = client.get(location).send().await?.text().await?;
+        let secs = content
+            .split("data-seconds=\"")
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .expect("data-seconds attribute")
+            .parse::<u64>()?;
+
+        // We have a problem if the test takes more than 10 seconds.
+        assert!((3590..=3600).contains(&secs), "unexpected seconds: {secs}");
+        assert!(content.contains("id=\"expiration-countdown\""));
+        assert!(content.contains("data-expired=\"expired\""));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn owner_handoff_does_not_open_redirect() -> Result<(), Box<dyn std::error::Error>> {
         #[derive(serde::Serialize)]
         struct Api {

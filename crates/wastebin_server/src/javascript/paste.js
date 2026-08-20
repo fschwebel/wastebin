@@ -128,6 +128,52 @@ function onKey(e) {
   }
 }
 
+// Must produce the same rough approximation as the `Display` impl of
+// `wastebin_core::expiration::Expiration`, so ticking over from the
+// server-rendered value is seamless.
+function formatExpiration(secs) {
+  const units = [
+    [365 * 24 * 60 * 60, "year", "years"],
+    [30 * 24 * 60 * 60, "month", "months"],
+    [7 * 24 * 60 * 60, "week", "weeks"],
+    [24 * 60 * 60, "day", "days"],
+    [60 * 60, "hour", "hours"],
+    [60, "minute", "mins"],
+  ];
+
+  const parts = [];
+
+  for (const [magnitude, one, many] of units) {
+    const count = Math.floor(secs / magnitude);
+    if (count > 0) {
+      parts.push(count > 1 ? count + " " + many : "1 " + one);
+      secs %= magnitude;
+    }
+  }
+
+  if (secs > 0) {
+    parts.push(secs + " secs");
+  }
+
+  return parts.join(", ");
+}
+
+const countdown = $("expiration-countdown");
+if (countdown) {
+  const expiresAt = Date.now() + countdown.dataset.seconds * 1000;
+
+  const timer = setInterval(() => {
+    const secs = Math.round((expiresAt - Date.now()) / 1000);
+    if (secs > 0) {
+      countdown.textContent = formatExpiration(secs);
+    } else {
+      const expiration = $("expiration");
+      expiration.textContent = expiration.dataset.expired;
+      clearInterval(timer);
+    }
+  }, 1000);
+}
+
 function toggleOverlay() {
   const overlay = document.getElementById('overlay');
   if (!overlay) return;

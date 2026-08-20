@@ -5,6 +5,8 @@
 ### Changed
 
 - Top-align Markdown-rendered table cells.
+- The expiry counter on the paste view counts down in real time and switches
+  to an "expired" note once the paste has lapsed.
 
 
 ## 3.7.2
