@@ -22,7 +22,9 @@ use http::header::{
     CONTENT_SECURITY_POLICY, REFERRER_POLICY, SERVER, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
     X_XSS_PROTECTION,
 };
-use tokio::net::{TcpListener, UnixListener};
+use tokio::net::TcpListener;
+#[cfg(unix)]
+use tokio::net::UnixListener;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::timeout::TimeoutLayer;
@@ -291,11 +293,20 @@ async fn start() -> Result<(), Box<dyn std::error::Error>> {
                     .with_graceful_shutdown(shutdown_signal())
                     .await?;
             }
+            #[cfg(unix)]
             env::SocketType::Unix(path) => {
                 let listener = UnixListener::bind(path)?;
                 axum::serve(listener, app)
                     .with_graceful_shutdown(shutdown_signal())
                     .await?;
+            }
+            #[cfg(not(unix))]
+            env::SocketType::Unix(path) => {
+                return Err(format!(
+                    "binding to Unix domain socket {} is not supported on this platform",
+                    path.display()
+                )
+                .into());
             }
         }
 
