@@ -19,7 +19,7 @@
   42 secs".
 - Set Secure on owner token cookies.
 
- ### Fixed
+### Fixed
 
 - Relax the `uid` cookie's `SameSite` attribute from `Strict` to `Lax` so that
   opening a magic link from another site keeps the existing claim. Deletion is
