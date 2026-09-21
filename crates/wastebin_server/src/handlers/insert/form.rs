@@ -6,9 +6,9 @@ use axum_extra::extract::cookie::SignedCookieJar;
 use serde::{Deserialize, Serialize};
 
 use crate::Page;
-use crate::handlers::cookie;
-use crate::handlers::extract::{Theme, Uids, serialize_uids};
+use crate::handlers::extract::{Theme, Uids};
 use crate::handlers::html::make_error;
+use crate::handlers::uid_cookie;
 use crate::i18n::Lang;
 use wastebin_core::db::{Database, write};
 
@@ -97,8 +97,7 @@ pub async fn post<E: std::fmt::Debug>(
             }
         };
 
-        let mut cookie = cookie("uid", serialize_uids(&uids));
-        cookie.set_secure(true);
+        let cookie = uid_cookie(&uids);
 
         Ok((jar.add(cookie), Redirect::to(&url)))
     }
@@ -179,7 +178,7 @@ mod tests {
         assert!(cookie.value().len() > 40);
         assert_eq!(cookie.path().unwrap(), "/");
         assert!(cookie.http_only());
-        assert!(cookie.same_site_strict());
+        assert!(cookie.same_site_lax());
         assert!(cookie.domain().is_none());
         assert!(cookie.expires().is_none());
         assert!(cookie.max_age().is_none());

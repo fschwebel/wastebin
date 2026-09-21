@@ -7,6 +7,7 @@
 - `WASTEBIN_ID_SIZE` environment variable to generate short six-character
   paste identifiers (32-bit) like wastebin before 3.0 instead of the default
   eleven-character (64-bit) ones.
+- Rosé Pine theme, selectable with `WASTEBIN_THEME=rosepine`.
 
 ### Changed
 
@@ -16,7 +17,14 @@
 - Expiry durations display at most their two most significant units, e.g.
   "2 years, 2 weeks" instead of "2 years, 2 weeks, 3 days, 23 hours, 59 mins,
   42 secs".
+- Set Secure on owner token cookies.
 
+ ### Fixed
+
+- Relax the `uid` cookie's `SameSite` attribute from `Strict` to `Lax` so that
+  opening a magic link from another site keeps the existing claim. Deletion is
+  only possible via `POST` and `DELETE`, which `Lax` still excludes from
+  cross-site requests.
 
 ## 3.7.2
 
