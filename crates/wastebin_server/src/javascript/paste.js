@@ -134,31 +134,30 @@ function onKey(e) {
   }
 }
 
-// Must produce the same rough approximation as the `Display` impl of
-// `wastebin_core::expiration::Expiration`, so ticking over from the
-// server-rendered value is seamless.
-function formatExpiration(secs) {
+// Must produce the same rough approximation as `Lang::duration` on the
+// server, so ticking over from the server-rendered value is seamless: the
+// same units, at most two parts, and the translated `{0}` templates the page
+// passes in as `data-{unit}-one` and `data-{unit}-many` attributes.
+function formatExpiration(secs, templates) {
   const units = [
-    [365 * 24 * 60 * 60, "year", "years"],
-    [30 * 24 * 60 * 60, "month", "months"],
-    [7 * 24 * 60 * 60, "week", "weeks"],
-    [24 * 60 * 60, "day", "days"],
-    [60 * 60, "hour", "hours"],
-    [60, "minute", "mins"],
+    [365 * 24 * 60 * 60, "year"],
+    [30 * 24 * 60 * 60, "month"],
+    [7 * 24 * 60 * 60, "week"],
+    [24 * 60 * 60, "day"],
+    [60 * 60, "hour"],
+    [60, "minute"],
+    [1, "second"],
   ];
 
   const parts = [];
 
-  for (const [magnitude, one, many] of units) {
+  for (const [magnitude, unit] of units) {
     const count = Math.floor(secs / magnitude);
     if (count > 0) {
-      parts.push(count > 1 ? count + " " + many : "1 " + one);
+      const template = templates[unit + (count === 1 ? "One" : "Many")];
+      parts.push(template.replace("{0}", count));
       secs %= magnitude;
     }
-  }
-
-  if (secs > 0) {
-    parts.push(secs + " secs");
   }
 
   return parts.slice(0, 2).join(", ");
@@ -171,7 +170,7 @@ if (countdown) {
   const timer = setInterval(() => {
     const secs = Math.round((expiresAt - Date.now()) / 1000);
     if (secs > 0) {
-      countdown.textContent = formatExpiration(secs);
+      countdown.textContent = formatExpiration(secs, countdown.dataset);
     } else {
       const expiration = $("expiration");
       expiration.textContent = expiration.dataset.expired;

@@ -70,6 +70,23 @@ impl Lang {
             .collect::<Vec<_>>()
             .join(", ")
     }
+
+    /// Singular and plural templates of every duration unit, largest first, as
+    /// `(unit, singular, plural)`. The paste view hands them to `paste.js` so
+    /// that the expiry countdown ticks in the same language as
+    /// [`Lang::duration`] rendered it.
+    pub(crate) fn duration_units(self) -> [(&'static str, &'static str, &'static str); 7] {
+        [
+            ("year", "duration.year", "duration.years"),
+            ("month", "duration.month", "duration.months"),
+            ("week", "duration.week", "duration.weeks"),
+            ("day", "duration.day", "duration.days"),
+            ("hour", "duration.hour", "duration.hours"),
+            ("minute", "duration.minute", "duration.minutes"),
+            ("second", "duration.second", "duration.seconds"),
+        ]
+        .map(|(unit, singular, plural)| (unit, self.t(singular), self.t(plural)))
+    }
 }
 
 static EN: phf::Map<&'static str, &'static str> = phf_map! {

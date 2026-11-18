@@ -5,7 +5,7 @@
     <span class="nav-title">{{ title }}</span>
   {% endif %}
   {% if let Some(expiration) = expiration %}
-    <span class="nav-title nav-title-dim" id="expiration" data-expired="{{ lang.t("paste.expired") }}">{{ lang.t("paste.expires_in") }} <span id="expiration-countdown" data-seconds="{{ expiration.duration.as_secs() }}">{{ lang.duration(expiration) }}</span></span>
+    <span class="nav-title nav-title-dim" id="expiration" data-expired="{{ lang.t("paste.expired") }}">{{ lang.t("paste.expires_in") }} <span id="expiration-countdown" data-seconds="{{ expiration.duration.as_secs() }}"{% for (unit, singular, plural) in lang.duration_units() %} data-{{ unit }}-one="{{ singular }}" data-{{ unit }}-many="{{ plural }}"{% endfor %}>{{ lang.duration(expiration) }}</span></span>
   {% endif %}
 {% endblock %}
 

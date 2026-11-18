@@ -240,6 +240,48 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn countdown_carries_localized_unit_templates() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let client = Client::with_expirations("0,3600", StoreCookies(false)).await;
+
+        let res = client
+            .post_form()
+            .form(&crate::handlers::insert::form::Entry {
+                text: String::from("FooBarBaz"),
+                expires: Some(String::from("3600")),
+                ..Default::default()
+            })
+            .send()
+            .await?;
+        assert_eq!(res.status(), StatusCode::SEE_OTHER);
+        let location = res.headers().get("location").unwrap().to_str()?;
+
+        let content = client
+            .get(location)
+            .header(reqwest::header::ACCEPT_LANGUAGE, "de")
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        // paste.js formats the ticking countdown from these, so it stays in the
+        // language the server rendered the initial value in.
+        for attribute in [
+            "data-year-one=\"{0} Jahr\"",
+            "data-month-many=\"{0} Monate\"",
+            "data-hour-many=\"{0} Stunden\"",
+            "data-minute-many=\"{0} Minuten\"",
+            "data-second-one=\"{0} Sekunde\"",
+            "data-second-many=\"{0} Sekunden\"",
+        ] {
+            assert!(content.contains(attribute), "missing {attribute}");
+        }
+        assert!(content.contains("data-expired=\"abgelaufen\""));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn owner_handoff_does_not_open_redirect() -> Result<(), Box<dyn std::error::Error>> {
         #[derive(serde::Serialize)]
         struct Api {
