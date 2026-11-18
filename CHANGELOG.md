@@ -15,6 +15,8 @@
 - Expiry durations display at most their two most significant units, e.g.
   "2 years, 2 weeks" instead of "2 years, 2 weeks, 3 days, 23 hours, 59 mins,
   42 secs".
+- Refused deletes answer with a JSON error on `DELETE /{id}` and with the error
+  page on `POST /delete/{id}` instead of an empty 403 response.
 
 ### Fixed
 
@@ -23,6 +25,14 @@
 - Unlink Unix domain socket after shutdown.
 - Reject paste extensions outside ASCII alphanumerics, `.`, `_` and `-`. Escape
   the burn page's paste link in the template.
+- Redirect the owner handoff (`/{id}?owner=…`) to the canonical paste URL
+  instead of the raw path parameter, which could send the browser off-site.
+- Enforce `WASTEBIN_PASTE_EXPIRATIONS` on insert: a request for any other
+  expiration is rejected with 400 instead of being stored.
+- Do not cache highlighted renders larger than 1 MiB, bounding cache memory to
+  roughly `WASTEBIN_CACHE_SIZE` × 1 MiB.
+- Limit concurrent Argon2 password hashing to the number of logical CPUs, so
+  that a burst of password attempts cannot exhaust memory and CPU.
 
 ## [3.9.0] - 2026-10-15
 
