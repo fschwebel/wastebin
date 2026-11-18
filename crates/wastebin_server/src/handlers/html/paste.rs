@@ -304,27 +304,41 @@ mod tests {
             .await?
             .owner;
 
-        // `%5C` decodes to a backslash; `/\host` is normalised to `//host` (an
-        // authority) by browsers. The handoff must not redirect there.
-        let res = client
-            .get("/%5Cevil.example.com")
-            .query(&[("owner", &owner)])
-            .send()
-            .await?;
+        // Each id decodes to something a browser resolves off-site once it is
+        // put behind a single `/`: `\` is treated as `/`, `/x` makes `//x`, and
+        // TAB, CR and LF are stripped from URLs. CR/LF must not reach a header.
+        for id in [
+            "%5Cevil.example.com",
+            "%2Fevil.example.com",
+            "%2F%2Fevil.example.com",
+            "%2F%5Cevil.example.com",
+            "%09%2Fevil.example.com",
+            "%5C%5Cevil.example.com",
+            "%0D%0AX-Injected:%201",
+        ] {
+            let res = client
+                .get(&format!("/{id}"))
+                .query(&[("owner", &owner)])
+                .send()
+                .await?;
 
-        assert_ne!(
-            res.status(),
-            StatusCode::SEE_OTHER,
-            "handoff issued a redirect for a non-paste id"
-        );
-        if let Some(location) = res.headers().get("location") {
-            let location = location.to_str()?;
-            assert!(
-                location.starts_with('/')
-                    && !location.starts_with("//")
-                    && !location.starts_with("/\\"),
-                "off-site redirect Location: {location}"
+            assert!(!res.status().is_server_error(), "/{id}: {}", res.status());
+            assert_ne!(
+                res.status(),
+                StatusCode::SEE_OTHER,
+                "handoff issued a redirect for the non-paste id /{id}"
             );
+            assert!(!res.headers().contains_key("x-injected"), "/{id}");
+            if let Some(location) = res.headers().get("location") {
+                let location = location.to_str()?;
+                assert!(
+                    location.starts_with('/')
+                        && !location.starts_with("//")
+                        && !location.starts_with("/\\")
+                        && !location.contains(['\t', '\r', '\n']),
+                    "off-site redirect Location: {location}"
+                );
+            }
         }
 
         Ok(())

@@ -124,4 +124,28 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn tab_in_referer_falls_back() -> Result<(), Box<dyn std::error::Error>> {
+        // Browsers strip TAB from URLs, so `/<TAB>/host` resolves to `//host`.
+        let client = Client::new(StoreCookies(true)).await;
+
+        for referer in [
+            "/\t/evil.example.com",
+            "http://localhost/\t/evil.example.com",
+        ] {
+            let response = client
+                .get("/theme")
+                .header(REFERER, referer)
+                .query(&[("pref", "dark")])
+                .send()
+                .await?;
+
+            assert!(response.status().is_redirection());
+            let location = response.headers().get("location").unwrap().to_str()?;
+            assert_eq!(location, "/", "referer {referer:?}");
+        }
+
+        Ok(())
+    }
 }
