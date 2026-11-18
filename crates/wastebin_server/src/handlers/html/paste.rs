@@ -8,8 +8,10 @@ use serde::Deserialize;
 
 use crate::cache::{Key, Mode};
 use crate::handlers::extract::{Theme, Uids, verify_owner_token};
-use crate::handlers::html::{BurnConfirmation, ErrorResponse, PasswordInput, make_error};
-use crate::handlers::uid_cookie;
+use crate::handlers::html::{
+    BurnConfirmation, ErrorResponse, FormAction, PasswordInput, make_error,
+};
+use crate::handlers::{NoStore, uid_cookie};
 use crate::i18n::Lang;
 use crate::{Cache, Database, Highlighter, Page};
 use wastebin_core::crypto::Password;
@@ -24,11 +26,6 @@ use wastebin_core::expiration::Expiration;
 #[derive(Deserialize, Debug)]
 pub(crate) struct OwnerHandoff {
     pub(crate) owner: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-pub(crate) struct PasswordForm {
-    pub(crate) password: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -106,34 +103,35 @@ pub async fn get<E>(
         let confirmed = form.as_ref().and_then(|form| form.confirm_burn.as_deref()) == Some("1");
         let no_password = password.is_none();
         let key: Key = id.parse()?;
-
-        let metadata = match db.get_metadata(key.id).await {
-            Ok(metadata) => metadata,
-            Err(err) => return Err(err.into()),
-        };
+        let metadata = db.get_metadata(key.id).await?;
 
         if metadata.must_be_deleted && !confirmed {
             return Ok(BurnConfirmation {
                 page: page.clone(),
                 theme: theme.clone(),
                 lang,
-                id,
                 title: metadata.title.clone(),
+                action: FormAction::source(&key),
             }
             .into_response());
         }
 
-        let (data, is_available) = match db.get(key.id, password).await {
-            Ok(Entry::Regular(data)) => (data, true),
-            Ok(Entry::Burned(data)) => (data, false),
+        let (data, is_available, encrypted) = match db.get(key.id, password).await {
+            Ok(Entry::Regular(data)) => (data, true, false),
+            Ok(Entry::Burned(data)) => (data, false, false),
+            Ok(Entry::Encrypted(data)) => {
+                let is_available = !data.metadata.must_be_deleted;
+                (data, is_available, true)
+            }
             Err(db::Error::NoPassword) => {
                 return Ok(PasswordInput {
                     page: page.clone(),
                     theme: theme.clone(),
                     lang,
-                    id,
+                    action: FormAction::source(&key),
                 }
-                .into_response());
+                .into_response()
+                .no_store());
             }
             Err(err) => return Err(err.into()),
         };
@@ -182,7 +180,12 @@ pub async fn get<E>(
             is_markdown,
         };
 
-        Ok(paste.into_response())
+        let response = paste.into_response();
+        Ok(if encrypted {
+            response.no_store()
+        } else {
+            response
+        })
     }
     .await
     .map_err(|err| make_error(err, page, theme, lang))
@@ -281,6 +284,69 @@ mod tests {
                 "off-site redirect Location: {location}"
             );
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn password_prompt_keeps_extension() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new(StoreCookies(false)).await;
+        let data = crate::handlers::insert::form::Entry {
+            text: String::from("fn main() {}"),
+            extension: Some(String::from("rs")),
+            password: String::from("hunter2"),
+            ..Default::default()
+        };
+
+        let res = client.post_form().form(&data).send().await?;
+        assert_eq!(res.status(), StatusCode::SEE_OTHER);
+        let location = res.headers().get("location").unwrap().to_str()?.to_owned();
+        assert!(location.ends_with(".rs"), "location: {location}");
+
+        // The prompt submits back to the very same paste, extension included.
+        let body = client.get(&location).send().await?.text().await?;
+        assert!(
+            body.contains(&format!("action=\"{location}\"")),
+            "body: {body}"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn encrypted_paste_is_not_stored() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new(StoreCookies(false)).await;
+        let password = "hunter2";
+        let data = crate::handlers::insert::form::Entry {
+            text: String::from("secret-body-xyz"),
+            password: password.to_string(),
+            ..Default::default()
+        };
+
+        let res = client.post_form().form(&data).send().await?;
+        assert_eq!(res.status(), StatusCode::SEE_OTHER);
+        let location = res.headers().get("location").unwrap().to_str()?.to_owned();
+
+        // The password prompt is not cacheable.
+        let res = client.get(&location).send().await?;
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(
+            res.headers().get(reqwest::header::CACHE_CONTROL).unwrap(),
+            "no-store"
+        );
+
+        // The decrypted paste is not cacheable either.
+        let res = client
+            .post(&location)
+            .form(&[("password", password)])
+            .header(reqwest::header::ACCEPT, "text/html; charset=utf-8")
+            .send()
+            .await?;
+        assert_eq!(res.status(), StatusCode::OK);
+        let cache_control = res.headers().get(reqwest::header::CACHE_CONTROL).cloned();
+        let body = res.text().await?;
+        assert!(body.contains("secret-body-xyz"), "body: {body}");
+        assert_eq!(cache_control.unwrap(), "no-store");
 
         Ok(())
     }

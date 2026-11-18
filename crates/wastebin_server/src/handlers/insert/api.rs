@@ -6,6 +6,7 @@ use axum_extra::extract::cookie::Key;
 use serde::{Deserialize, Serialize};
 
 use crate::Page;
+use crate::cache::valid_extension;
 use crate::errors::{Error, JsonErrorResponse};
 use crate::handlers::extract::{sign_owner_token, verify_owner_token};
 use wastebin_core::db::{Database, write};
@@ -35,13 +36,16 @@ pub(crate) struct RedirectResponse {
 
 impl From<Entry> for write::Entry {
     fn from(entry: Entry) -> Self {
+        // Turn Some("") into None.
+        let password = entry.password.and_then(|s| (!s.is_empty()).then_some(s));
+
         Self {
             text: entry.text,
             extension: entry.extension,
             expires: entry.expires,
             burn_after_reading: entry.burn_after_reading,
             uid: None,
-            password: entry.password,
+            password,
             title: entry.title,
         }
     }
@@ -53,6 +57,12 @@ pub async fn post(
     State(page): State<Page>,
     Json(entry): Json<Entry>,
 ) -> Result<Json<RedirectResponse>, JsonErrorResponse> {
+    if let Some(extension) = &entry.extension
+        && !valid_extension(extension)
+    {
+        return Err(Error::Id(wastebin_core::id::Error::IllegalCharacters).into());
+    }
+
     // Enforce the configured expiration set: `0` means "no expiration", any
     // other value must be one of the offered durations.
     let requested = entry.expires.map_or(0, |secs| u64::from(secs.get()));
@@ -90,6 +100,16 @@ mod tests {
     use reqwest::StatusCode;
     use wastebin_core::db::write::Entry;
 
+    #[test]
+    fn empty_password_is_none() -> Result<(), Box<dyn std::error::Error>> {
+        let data = r#"{"text": "foo", "password": ""}"#;
+        let entry: super::Entry = serde_json::from_str(data)?;
+        let entry = Entry::from(entry);
+        assert!(entry.password.is_none());
+
+        Ok(())
+    }
+
     #[tokio::test]
     async fn insert() -> Result<(), Box<dyn std::error::Error>> {
         let client = Client::new(StoreCookies(false)).await;
@@ -107,6 +127,21 @@ mod tests {
         let res = client.get(&format!("/raw{}", payload.path)).send().await?;
         assert_eq!(res.status(), StatusCode::OK);
         assert_eq!(res.text().await?, "FooBarBaz");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn insert_rejects_invalid_extension() -> Result<(), Box<dyn std::error::Error>> {
+        let client = Client::new(StoreCookies(false)).await;
+        let entry = super::Entry {
+            text: "FooBarBaz".to_string(),
+            extension: Some("\"><img src=x>".to_string()),
+            ..Default::default()
+        };
+
+        let res = client.post_json().json(&entry).send().await?;
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
 
         Ok(())
     }

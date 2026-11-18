@@ -15,6 +15,8 @@ pub enum Error {
     SyntaxHighlighting(#[from] syntect::Error),
     #[error("syntax parsing error: {0}")]
     SyntaxParsing(#[from] syntect::parsing::ParsingError),
+    #[error("failed to escaped")]
+    Escape,
 }
 
 const HIGHLIGHT_LINE_LENGTH_CUTOFF: usize = 2048;
@@ -192,6 +194,15 @@ impl Highlighter {
     /// Highlight `text` with the given file extension which is used to
     /// determine the right syntax. If not given or does not exist, plain text will be generated.
     pub fn highlight(&self, text: String, ext: Option<String>) -> Result<Html, Error> {
+        // Rows are emitted one per line with the terminating `\n` stripped, so the `\r` of a CRLF
+        // ending would end up inside the row's text, where the HTML parser turns it back into a
+        // line break. Normalize it so a row's text stays one line.
+        let text = if text.contains('\r') {
+            text.replace("\r\n", "\n")
+        } else {
+            text
+        };
+
         let syntax_ref = self
             .syntax_set
             .find_syntax_by_extension(ext.as_deref().unwrap_or("txt"))
@@ -209,11 +220,9 @@ impl Highlighter {
 
         for (mut line_number, line) in LinesWithEndings::from(&text).enumerate() {
             let (formatted, delta) = if line.len() > HIGHLIGHT_LINE_LENGTH_CUTOFF {
-                // Skipping the highlighter must not skip escaping: `formatted` is written
-                // into the page as raw HTML further down.
-                let mut plain = String::with_capacity(line.len());
-                escape(line, &mut plain).map_err(syntect::Error::from)?;
-                (plain, 0)
+                let mut escaped = String::with_capacity(line.len());
+                escape(line, &mut escaped).map_err(|_| Error::Escape)?;
+                (escaped, 0)
             } else {
                 let parsed = parse_state.parse_line(line, &self.syntax_set)?;
 
@@ -341,7 +350,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn long_lines_are_escaped() -> Result<(), Box<dyn std::error::Error>> {
+    fn long_plain_text_lines_are_escaped() -> Result<(), Box<dyn std::error::Error>> {
         let highlighter = Highlighter::default();
         let payload = "<img src=x onerror=alert(1)>";
         let line = format!("{}{payload}", "A".repeat(HIGHLIGHT_LINE_LENGTH_CUTOFF));
@@ -360,9 +369,7 @@ mod tests {
 
     #[test]
     fn markdown_links() -> Result<(), Box<dyn std::error::Error>> {
-        let highlighter = Highlighter::default();
-
-        let html = highlighter.highlight(
+        let html = Highlighter::default().highlight(
             "[hello](https://github.com/matze/wastebin)".into(),
             Some("md".into()),
         )?;
@@ -400,11 +407,10 @@ mod tests {
 
     #[test]
     fn rows_are_self_balanced_for_markdown_lists() -> Result<(), Box<dyn std::error::Error>> {
-        let highlighter = Highlighter::default();
         let text = "## Features\n\n\
             * [axum](https://github.com/tokio-rs/axum) and [sqlite3](https://www.sqlite.org) backend\n\
             * comes as a single binary with low memory footprint\n";
-        let html = highlighter
+        let html = Highlighter::default()
             .highlight(text.into(), Some("md".into()))?
             .into_inner();
 
@@ -419,8 +425,7 @@ mod tests {
 
     #[test]
     fn markdown_link_is_well_nested() -> Result<(), Box<dyn std::error::Error>> {
-        let highlighter = Highlighter::default();
-        let html = highlighter
+        let html = Highlighter::default()
             .highlight("[hi](https://example.com)".into(), Some("md".into()))?
             .into_inner();
 
@@ -428,6 +433,45 @@ mod tests {
             !html.contains("</span></a>"),
             "anchor must close before its enclosing span: {html}"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn crlf_line_endings_do_not_leak_into_rows() -> Result<(), Box<dyn std::error::Error>> {
+        let html = Highlighter::default()
+            .highlight("let a = 1;\r\nlet b = 2;\r\n".into(), Some("rs".into()))?
+            .into_inner();
+
+        assert!(
+            !html.contains('\r'),
+            "carriage return leaked into the rendered HTML: {html}"
+        );
+
+        let rows: Vec<_> = html
+            .split("</div>")
+            .filter(|row| row.contains("id=\"LC"))
+            .collect();
+        assert_eq!(rows.len(), 2, "expected one row per line: {html}");
+
+        // A row's text must be exactly its line's content, so that consumers joining the rows
+        // with `\n` (see the copy button in `paste.js`) reproduce the paste.
+        for row in rows {
+            assert!(
+                !row.contains('\n'),
+                "line terminator leaked into a row: {row}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn long_lines_are_escaped() -> Result<(), Box<dyn std::error::Error>> {
+        let mut text = "x".repeat(HIGHLIGHT_LINE_LENGTH_CUTOFF);
+        text.push_str("<img src=x>");
+        let html = Highlighter::default()
+            .highlight(text, Some("md".into()))?
+            .into_inner();
+        assert!(html.contains("&lt;img src=x&gt;"));
         Ok(())
     }
 }

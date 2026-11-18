@@ -1,43 +1,92 @@
 # Changelog
 
-## Unreleased
+## [Unreleased]
 
 ### Added
 
 - `WASTEBIN_ID_SIZE` environment variable to generate short six-character
   paste identifiers (32-bit) like wastebin before 3.0 instead of the default
   eleven-character (64-bit) ones.
-- Rosé Pine theme, selectable with `WASTEBIN_THEME=rosepine`.
 
 ### Changed
 
-- Top-align Markdown-rendered table cells.
 - The expiry counter on the paste view counts down in real time and switches
   to an "expired" note once the paste has lapsed.
 - Expiry durations display at most their two most significant units, e.g.
   "2 years, 2 weeks" instead of "2 years, 2 weeks, 3 days, 23 hours, 59 mins,
   42 secs".
-- Set Secure on owner token cookies.
 
 ### Fixed
 
+- Reject off-origin and scheme-relative `Referer` values when redirecting back
+  after a theme change, closing an open-redirect bypass via `//`-prefixed paths.
+- Unlink Unix domain socket after shutdown.
+- Reject paste extensions outside ASCII alphanumerics, `.`, `_` and `-`. Escape
+  the burn page's paste link in the template.
+
+## [3.9.0] - 2026-10-15
+
+### Changed
+
+- Precompress CSS and JavaScript assets once at startup and serve them as `br` or
+  `gzip` depending on the request's `Accept-Encoding` header, instead of
+  compressing them again on every request.
+- Serve the favicon under a content-hashed URL like the other assets so that it
+  may be cached as `immutable`.
+- Derive header, panel, gutter, accent, selection and Markdown admonition colors
+  from the selected theme with `WASTEBIN_THEME` now recoloring the whole UI.
+- Use a paste's title as the HTML page title on its own instead of prefixing
+  the configured page title from `WASTEBIN_TITLE`. Pages without a title keep
+  showing the configured title.
+- Top-align the burn-after-reading and encrypt toggles with their labels.
+- An empty password string in a JSON API payload now is interpreted as no
+  password rather than an empty string.
+
+### Fixed
+
+- With soft-wrap enabled, keep line numbers aligned with the lines.
+- Copy a paste's content with LF line breaks intact.
+- Send `Cache-Control: no-store` for password-protected pastes so that
+  decrypted content and the password prompt are never cached.
+- Localize expiration durations.
+- Do not exit database handler and thus server on client timeout.
+- Escape unhighlighted overly long lines.
+- Deleting without a uid cookie now returns 403 instead of 200.
+- Add security headers to service error responses.
+- Show the burn-after-reading confirmation interstitial for the rendered Markdown
+  view (`/md/{id}`) too, instead of revealing and burning the paste right away.
+- Keep a paste's extension after submitting the password raw and download
+  views.
+
+## [3.8.0] - 2026-10-02
+
+### Added
+
+- Rosé Pine theme, selectable with `WASTEBIN_THEME=rosepine`.
+
+### Changed
+
+- Top-align Markdown-rendered table cells.
+- Set Secure on owner token cookies.
+- After submitting the password on rendered Markdown view, route back instead of
+  to the regular paste view.
+
+### Fixed
+
+- Render blank lines in the paste view so that the code stays aligned with the
+  line numbers.
 - Relax the `uid` cookie's `SameSite` attribute from `Strict` to `Lax` so that
   opening a magic link from another site keeps the existing claim. Deletion is
   only possible via `POST` and `DELETE`, which `Lax` still excludes from
   cross-site requests.
 
-## 3.7.2
-
-**2026-08-10**
+## [3.7.2] - 2026-08-10
 
 ### Fixed
 
 - Race condition that could leak a burned paste.
 
-
-## 3.7.1
-
-**2026-07-31**
+## [3.7.1] - 2026-07-31
 
 ### Added
 
@@ -49,16 +98,14 @@
 
 - Blockquote matches codeblocks now.
 
-
-## 3.7.0
-
-**2026-06-22**
+## [3.7.0] - 2026-06-22
 
 ### Added
 
 - Internationalization (i18n) support and initial Chinese and German
   translations.
-- Signed `owner` token in the JSON insert response for easier API-based deletions.
+- Signed `owner` token in the JSON insert response for easier API-based
+  deletions.
 
 ### Changed
 
@@ -69,10 +116,7 @@
 
 - Padding of admonition blocks.
 
-
-## 3.6.2
-
-**2026-05-01**
+## [3.6.2] - 2026-05-01
 
 ### Fixed
 
@@ -86,10 +130,7 @@
 - Re-try ten times to generate a new paste identifier in order to avoid
   collisions.
 
-
-## 3.6.1
-
-**2026-04-26**
+## [3.6.1] - 2026-04-26
 
 ### Fixed
 
@@ -108,10 +149,7 @@
 - Bold selected line numbers.
 - Reduced size of generated HTML.
 
-
-## 3.6.0
-
-**2026-04-21**
+## [3.6.0] - 2026-04-21
 
 ### Added
 
@@ -126,10 +164,7 @@
 
 - QR view not showing the remaining actions.
 
-
-## 3.5.0
-
-**2026-04-19**
+## [3.5.0] - 2026-04-19
 
 ### Changed
 
@@ -140,10 +175,7 @@
 
 - Line and range highlight for anchored paste views.
 
-
-## 3.4.1
-
-**2026-04-03**
+## [3.4.1] - 2026-04-03
 
 ### Changed
 
@@ -152,10 +184,7 @@
 - Set cookie attributes also on theme preference cookie.
 - Encode content disposition filename with RFC 5987 to avoid encoding problems.
 
-
-## 3.4.0
-
-**2025-12-25**
+## [3.4.0] - 2025-12-25
 
 ### Added
 
@@ -179,10 +208,7 @@
 - Check if Ctrl/Meta/Cmd key is pressed together with C to avoid unexpected
   behaviour on platforms where Ctrl+C might be registered as just C.
 
-
-## 3.3.0
-
-**2025-08-17**
+## [3.3.0] - 2025-08-17
 
 ### Added
 
@@ -202,10 +228,7 @@
 
 - Store `wastebin-ctl` correctly in the ARM image.
 
-
-## 3.2.0
-
-**2025-06-07**
+## [3.2.0] - 2025-06-07
 
 ### Added
 
@@ -233,10 +256,7 @@
 - Better number of days for expiration months (30 days instead of 28) and years
   (365 days instead of 336).
 
-
-## 3.1.0
-
-**2025-05-20**
+## [3.1.0] - 2025-05-20
 
 ### Added
 
@@ -262,12 +282,10 @@
 ### Fixed
 
 - Content disposition header value was wrongly constructed.
-- Download appended `txt` extension even if paste was uploaded without an extension.
+- Download appended `txt` extension even if paste was uploaded without an
+  extension.
 
-
-## 3.0.0
-
-**2025-03-05**
+## [3.0.0] - 2025-03-05
 
 ### Added
 
@@ -302,10 +320,7 @@
 - Sort syntax list in case insensitive manner.
 - Wrong background color for inline code in Markdown.
 
-
-## 2.7.1
-
-**2025-01-24**
+## [2.7.1] - 2025-01-24
 
 ### Changed
 
@@ -321,10 +336,7 @@
 - Allow selection of title.
 - QR code overflowing content.
 
-
-## 2.7.0
-
-**2025-01-15**
+## [2.7.0] - 2025-01-15
 
 ### Changed
 
@@ -339,10 +351,7 @@
 
 - Include extension in the QR code link.
 
-
-## 2.6.0
-
-**2025-01-12**
+## [2.6.0] - 2025-01-12
 
 ### Added
 
@@ -366,10 +375,7 @@
 - Issues reported by the w3c validator.
 - Vertical auto-scroll.
 
-
-## 2.5.0
-
-**2024-08-19**
+## [2.5.0] - 2024-08-19
 
 ### Added
 
@@ -383,10 +389,7 @@
 
 - Improve container layout and CSS.
 
-
-## 2.4.3
-
-**2023-08-24**
+## [2.4.3] - 2023-08-24
 
 ### Changed
 
@@ -396,28 +399,19 @@
 
 - Stretched vertically lines, mostly with bash scripts.
 
-
-## 2.4.2
-
-**2023-08-24**
+## [2.4.2] - 2023-08-24
 
 ### Fixed
 
 - Reading of encrypted pastes set to burn-after-reading.
 
-
-## 2.4.1
-
-**2023-08-13**
+## [2.4.1] - 2023-08-13
 
 ### Fixed
 
 - Initial reading of pastes set to burn-after-reading.
 
-
-## 2.4.0
-
-**2023-08-11**
+## [2.4.0] - 2023-08-11
 
 ### Added
 
@@ -436,20 +430,14 @@
 - Language selection filter which was not working correctly with certain
   characters.
 
-
-## 2.3.5
-
-**2023-07-17**
+## [2.3.5] - 2023-07-17
 
 ### Added
 
 - Additional syntaxes compiled by the [zola](https://github.com/getzola/zola)
   project.
 
-
-## 2.3.4
-
-**2023-06-29**
+## [2.3.4] - 2023-06-29
 
 ### Fixed
 
@@ -457,10 +445,7 @@
 - Do not highlight lines longer than 2048 characters. This can take a
   considerable amount of time effectively DoS'ing the server.
 
-
-## 2.3.3
-
-**2023-04-21**
+## [2.3.3] - 2023-04-21
 
 ### Added
 
@@ -475,10 +460,7 @@
 - Serve style CSS filename based on content hash to force client reload on
   change. With that bump max age for CSS to six months.
 
-
-## 2.3.2
-
-**2023-03-04**
+## [2.3.2] - 2023-03-04
 
 ### Changed
 
@@ -489,19 +471,13 @@
 
 - Format burn page like the rest.
 
-
-## 2.3.1
-
-**2023-02-04**
+## [2.3.1] - 2023-02-04
 
 ### Fixed
 
 - Return correct exit code in case of errors.
 
-
-## 2.3.0
-
-**2023-02-01**
+## [2.3.0] - 2023-02-01
 
 ### Changed
 
@@ -520,19 +496,13 @@
 - The database is not purged periodically anymore, instead expired entries are
   removed on access.
 
-
-## 2.2.1
-
-**2023-01-10**
+## [2.2.1] - 2023-01-10
 
 ### Changed
 
 - Upgraded to tokio 1.24.1 to mitigate RUSTSEC-2023-0001.
 
-
-## 2.2.0
-
-**2022-12-26**
+## [2.2.0] - 2022-12-26
 
 ### Changed
 
@@ -542,28 +512,19 @@
 
 - <kbd>d</kbd> downloads again.
 
-
-## 2.1.0
-
-**2022-11-07**
+## [2.1.0] - 2022-11-07
 
 ### Added
 
 - Paste text content by dragging and dropping files onto the text area.
 
-
-## 2.0.1
-
-**2022-10-14**
+## [2.0.1] - 2022-10-14
 
 ### Fixed
 
 - Broken insertion via JSON API.
 
-
-## 2.0.0
-
-**2022-07-31**
+## [2.0.0] - 2022-07-31
 
 ### Changed
 
@@ -578,30 +539,21 @@
 - Use `fmt=raw` query parameter to fetch plain text paste.
 - Set cache control timeout for the favicon.
 
-
-## 1.6.0
-
-**2022-07-19**
+## [1.6.0] - 2022-07-19
 
 ### Changed
 
 - Normal font color for the light theme to increase contrast.
 - Strange content padding.
 
-
-## 1.5.0
-
-**2022-07-04**
+## [1.5.0] - 2022-07-04
 
 ### Added
 
 - Link that is valid for one minute to delete a paste.
 - `generator` meta tag containing the version number.
 
-
-## 1.4.0
-
-**2022-06-27**
+## [1.4.0] - 2022-06-27
 
 ### Fixed
 
@@ -617,10 +569,7 @@
 - Link to download a paste (@yannickfunk).
 - Bind <kbd>d</kbd> to download a paste.
 
-
-## 1.3.0
-
-**2022-06-12**
+## [1.3.0] - 2022-06-12
 
 ### Added
 
@@ -631,19 +580,13 @@
 
 - Reduced font size of pre and text area to 13pt.
 
-
-## 1.2.1
-
-**2022-06-11**
+## [1.2.1] - 2022-06-11
 
 ### Fixed
 
 - Set bright color for textarea in dark mode.
 
-
-## 1.2.0
-
-**2022-06-08**
+## [1.2.0] - 2022-06-08
 
 ### Added
 
@@ -655,10 +598,7 @@
 - Limit maximum body size to 1 MB or a value set with `WASTEBIN_MAX_BODY_SIZE`
   in bytes.
 
-
-## 1.1.0
-
-**2022-06-06**
+## [1.1.0] - 2022-06-06
 
 ### Added
 
@@ -666,9 +606,49 @@
   times, especially when run in debug mode.
 - `/api/health` endpoint for render.com health checks.
 
-
-## 1.0.0
-
-**2022-06-02**
+## [1.0.0] - 2022-06-02
 
 - Initial release.
+
+[Unreleased]: https://github.com/matze/wastebin/compare/3.8.0...HEAD
+[3.8.0]: https://github.com/matze/wastebin/compare/3.7.2...3.8.0
+[3.7.2]: https://github.com/matze/wastebin/compare/3.7.1...3.7.2
+[3.7.1]: https://github.com/matze/wastebin/compare/3.7.0...3.7.1
+[3.7.0]: https://github.com/matze/wastebin/compare/3.6.2...3.7.0
+[3.6.2]: https://github.com/matze/wastebin/compare/3.6.1...3.6.2
+[3.6.1]: https://github.com/matze/wastebin/compare/3.6.0...3.6.1
+[3.6.0]: https://github.com/matze/wastebin/compare/3.5.0...3.6.0
+[3.5.0]: https://github.com/matze/wastebin/compare/3.4.1...3.5.0
+[3.4.1]: https://github.com/matze/wastebin/compare/3.4.0...3.4.1
+[3.4.0]: https://github.com/matze/wastebin/compare/3.3.0...3.4.0
+[3.3.0]: https://github.com/matze/wastebin/compare/3.2.0...3.3.0
+[3.2.0]: https://github.com/matze/wastebin/compare/3.1.0...3.2.0
+[3.1.0]: https://github.com/matze/wastebin/compare/3.0.0...3.1.0
+[3.0.0]: https://github.com/matze/wastebin/compare/2.7.1...3.0.0
+[2.7.1]: https://github.com/matze/wastebin/compare/2.7.0...2.7.1
+[2.7.0]: https://github.com/matze/wastebin/compare/2.6.0...2.7.0
+[2.6.0]: https://github.com/matze/wastebin/compare/2.5.0...2.6.0
+[2.5.0]: https://github.com/matze/wastebin/compare/2.4.3...2.5.0
+[2.4.3]: https://github.com/matze/wastebin/compare/2.4.2...2.4.3
+[2.4.2]: https://github.com/matze/wastebin/compare/2.4.1...2.4.2
+[2.4.1]: https://github.com/matze/wastebin/compare/2.4.0...2.4.1
+[2.4.0]: https://github.com/matze/wastebin/compare/2.3.5...2.4.0
+[2.3.5]: https://github.com/matze/wastebin/compare/2.3.4...2.3.5
+[2.3.4]: https://github.com/matze/wastebin/compare/2.3.3...2.3.4
+[2.3.3]: https://github.com/matze/wastebin/compare/2.3.2...2.3.3
+[2.3.2]: https://github.com/matze/wastebin/compare/2.3.1...2.3.2
+[2.3.1]: https://github.com/matze/wastebin/compare/2.3.0...2.3.1
+[2.3.0]: https://github.com/matze/wastebin/compare/2.2.1...2.3.0
+[2.2.1]: https://github.com/matze/wastebin/compare/2.2.0...2.2.1
+[2.2.0]: https://github.com/matze/wastebin/compare/2.1.0...2.2.0
+[2.1.0]: https://github.com/matze/wastebin/compare/2.0.1...2.1.0
+[2.0.1]: https://github.com/matze/wastebin/compare/2.0.0...2.0.1
+[2.0.0]: https://github.com/matze/wastebin/compare/1.6.0...2.0.0
+[1.6.0]: https://github.com/matze/wastebin/compare/1.5.0...1.6.0
+[1.5.0]: https://github.com/matze/wastebin/compare/1.4.0...1.5.0
+[1.4.0]: https://github.com/matze/wastebin/compare/1.3.0...1.4.0
+[1.3.0]: https://github.com/matze/wastebin/compare/1.2.1...1.3.0
+[1.2.1]: https://github.com/matze/wastebin/compare/1.2.0...1.2.1
+[1.2.0]: https://github.com/matze/wastebin/compare/1.1.0...1.2.0
+[1.1.0]: https://github.com/matze/wastebin/compare/1.0.0...1.1.0
+[1.0.0]: https://github.com/matze/wastebin/releases/tag/1.0.0

@@ -69,7 +69,12 @@ function showToast(text, timeout) {
 function copy() {
   const code = document.querySelector('.src-code code');
   if (!code) return;
-  const content = code.textContent.trim();
+  // Every row is a block element holding one line without its terminator.
+  // `textContent` drops the breaks between block elements along with it, so
+  // join the rows by hand.
+  const content = Array.from(code.querySelectorAll('[id^="LC"]'), row => row.textContent)
+    .join('\n')
+    .trim();
 
   navigator.clipboard.writeText(content)
     .then(() => {
@@ -118,6 +123,7 @@ function onKey(e) {
   }
   else if (e.key == 'w') {
     document.body.classList.toggle('line-wrap');
+    syncLineNumbers();
   }
   else if (e.key == 'm') {
     const toggle = document.getElementById('view-toggle');
@@ -182,4 +188,31 @@ function toggleOverlay() {
     overlay.addEventListener('click', () => { overlay.style.display = 'none'; });
     overlay.dataset.bound = '1';
   }
+}
+
+const codeContainer = document.querySelector('.src-code');
+const codeRows = codeContainer ? codeContainer.querySelectorAll('code > div[id^="LC"]') : [];
+const numberRows = document.querySelectorAll('#line-numbers > div[id^="L"]');
+
+// `w` soft-wraps the source view, which makes a line span several visual rows.
+// Grow each number's cell along with the line it labels so the gutter keeps up.
+function syncLineNumbers() {
+  if (!codeContainer || !codeRows.length) return;
+
+  const lineHeight = parseFloat(getComputedStyle(codeContainer).lineHeight);
+  if (!lineHeight) return;
+
+  for (let i = 0; i < codeRows.length && i < numberRows.length; i++) {
+    numberRows[i].style.setProperty('--rows', codeRows[i].getBoundingClientRect().height / lineHeight);
+  }
+}
+
+syncLineNumbers();
+
+// Wrapping changes with the available width and with the font metrics.
+if (window.ResizeObserver && codeContainer) {
+  new ResizeObserver(syncLineNumbers).observe(codeContainer);
+}
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(syncLineNumbers);
 }
