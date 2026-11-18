@@ -47,9 +47,12 @@ impl Lang {
             return self.t("duration.never").to_string();
         }
 
+        // Like the `Display` impl of `Expiration`, keep only the two most
+        // significant parts.
         expiration
             .components()
             .into_iter()
+            .take(2)
             .map(|(value, unit)| {
                 let (singular, plural) = match unit {
                     Unit::Year => ("duration.year", "duration.years"),
@@ -383,6 +386,15 @@ mod tests {
         assert_eq!(Lang::En.duration(&never), "never");
         assert_eq!(Lang::De.duration(&never), "nie");
         assert_eq!(Lang::Zh.duration(&never), "永不");
+    }
+
+    #[test]
+    fn duration_keeps_two_most_significant_units() {
+        // 2 hours, 30 minutes and 45 seconds.
+        let expiration: Expiration = "9045".parse().unwrap();
+        assert_eq!(Lang::En.duration(&expiration), "2 hours, 30 mins");
+        assert_eq!(Lang::De.duration(&expiration), "2 Stunden, 30 Minuten");
+        assert_eq!(Lang::Zh.duration(&expiration), "2 小时, 30 分钟");
     }
 
     #[test]
