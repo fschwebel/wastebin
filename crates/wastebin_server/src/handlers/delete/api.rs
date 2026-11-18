@@ -57,6 +57,18 @@ mod tests {
         let res = client.delete(&format!("/{id}")).send().await?;
         assert_eq!(res.status(), StatusCode::FORBIDDEN);
 
+        // Refused like any other API error, with a JSON body, not an empty one.
+        let content_type = res
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .map(|value| value.to_str().unwrap_or_default().to_owned())
+            .unwrap_or_default();
+        assert!(
+            content_type.starts_with("application/json"),
+            "content type: {content_type:?}"
+        );
+        assert!(!res.text().await?.is_empty());
+
         // The paste must survive an unauthorized delete.
         let res = client.get(&format!("/{id}")).send().await?;
         assert_eq!(res.status(), StatusCode::OK);

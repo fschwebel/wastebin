@@ -66,6 +66,18 @@ mod tests {
         let res = client.post(&format!("/delete/{id}")).send().await?;
         assert_eq!(res.status(), StatusCode::FORBIDDEN);
 
+        // Refused with the regular error page, not an empty body.
+        let content_type = res
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .map(|value| value.to_str().unwrap_or_default().to_owned())
+            .unwrap_or_default();
+        assert!(
+            content_type.starts_with("text/html"),
+            "content type: {content_type:?}"
+        );
+        assert!(!res.text().await?.is_empty());
+
         // The paste must survive an unauthorized delete.
         let res = client.get(&format!("/{id}")).send().await?;
         assert_eq!(res.status(), StatusCode::OK);
